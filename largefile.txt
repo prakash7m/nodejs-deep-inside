@@ -1,0 +1,533 @@
+Skip to content
+Safari Home
+Recommended
+Queue
+History
+Topics
+Tutorials
+Offers & Deals
+Newsletters
+Highlights
+Settings
+Support
+Sign Out
+Table of Contents for  Pro Node.js for Developers
+CLOSE
+Cover image for Pro Node.js for Developers
+ publisher logo Pro Node.js for Developers
+by Colin J. Ihrig
+Published by Apress, 2013
+Title Page
+Dedication
+Contents at a Glance
+Contents (04:36 mins)
+About the Author
+About the Technical Reviewer (01:09 mins)
+Acknowledgments
+Introduction (01:09 mins)
+CHAPTER 1: Getting Started (14:57 mins)
+CHAPTER 2: The Node Module System (34:30 mins)
+CHAPTER 3: The Node Programming Model (26:27 mins)
+CHAPTER 4: Events and Timers (24:09 mins)
+CHAPTER 5: The Command Line Interface (31:03 mins)
+CHAPTER 6: The File System (28:45 mins)
+CHAPTER 7: Streams (24:09 mins)
+CHAPTER 8: Binary Data (34:30 mins)
+CHAPTER 9: Executing Code (27:36 mins)
+CHAPTER 10: Network Programming (36:48 mins)
+CHAPTER 11: HTTP (36:48 mins)
+CHAPTER 12: The Express Framework (26:27 mins)
+CHAPTER 13: The Real-Time Web (20:42 mins)
+CHAPTER 14: Databases (25:18 mins)
+CHAPTER 15: Logging, Debugging, and Testing (27:36 mins)
+CHAPTER 16: Application Scaling (23:00 mins)
+APPENDIX A: JavaScript Object Notation (13:48 mins)
+Index (11:30 mins)
+Search in book...
+
+Toggle Font Controls
+PREV Previous Chapter
+CHAPTER 6: The File System
+NEXT Next Chapter
+CHAPTER 8: Binary Data
+CHAPTER 7
+
+image
+
+Streams
+
+Node makes extensive use of streams as a data transfer mechanism—for example, for reading and writing files and transmitting data over network sockets. Chapter 5 has already shown you the standard streams—stdin, stdout, and stderr. This chapter, which explores Node’s streams API in greater detail, presents the different types of streams, how they work, and their various applications. But before starting, you should be aware that the streams API, while an important part of the Node core, is listed as unstable in the official documentation.
+
+What Are Streams?
+
+Streams are a mechanism for transferring data between two points. In terms of behavior, a simple garden hose provides a good analogy. When you need to water your lawn, you use a hose to connect a water supply to a sprinkler. When you turn the water on, it flows through the hose to the sprinkler. It is then up to the sprinkler to distribute the water.
+
+Streams are conceptually very similar. Compare watering the lawn to a call to console.log(), for example. In this case, a Node application acts as the water supply. When console.log() is called, the water is turned on, and information flows through the standard output stream. At this point, Node is no longer concerned with what happens to the data. The stdout stream delivers the data to its destination. In this case, the destination (the sprinkler) could be almost anything—a terminal window, a file, another program.
+
+Working with Streams
+
+Node supports several types of streams, all of which inherit from EventEmitter. Each type of stream behaves slightly differently. To work with the various types of streams, first import the stream core module (see Listing 7-1).
+
+Listing 7-1.  Importing the stream Module
+
+var Stream = require("stream");
+Importing the stream module returns a reference to the Stream constructor. The constructor can then be used to instantiate new streams, as shown in Listing 7-2.
+
+Listing 7-2.  Creating a New Stream Using the stream Module
+
+var Stream = require("stream");
+var stream = new Stream();
+Readable Streams
+
+Readable streams are sources of data. A typical readable stream is a file that has been opened for reading. The simplest way to create a readable stream is to assign the stream’s readable property to true and then emit data, end, close, and error events. The following sections explore how these events are used.
+
+data Events
+
+You use a data event to indicate that a new piece of stream data, referred to as a chunk, is available. For each data event emitted, the handler is passed the actual data chunk. Many applications emit the data chunk as a binary Buffer. This is what the official documentation specifies, although technically any data can be emitted. For consistency, it is recommended that data events use a Buffer. The example in Listing 7-3 emits a data event, with the chunk specified as a Buffer.
+
+Listing 7-3.  Creating a Readable Stream And Emitting a data Event
+
+var Stream = require("stream");
+var stream = new Stream();
+
+stream.readable = true;
+stream.emit("data", new Buffer("foo"));
+The end Event
+
+Once a stream sends all of its data, it should emit a single end event. Once the end event is emitted, no further data events should be emitted. The end event does not include any accompanying data. The example in Listing 7-4 creates a readable stream that sends data once a second for five seconds using an interval. Date comparisons are used to determine when five seconds have elapsed. At that point, an end event is emitted, and the interval is cleared.
+
+Listing 7-4.  A Readable Stream That Emits Several data Events Followed by an end Event
+
+var Stream = require("stream");
+var stream = new Stream();
+var duration = 5 * 1000; // 5 seconds
+var end = Date.now() + duration;
+var interval;
+
+stream.readable = true;
+interval = setInterval(function() {
+  var now = Date.now();
+
+  console.log("Emitting a data event");
+  stream.emit("data", new Buffer("foo"));
+
+  if (now >= end) {
+    console.log("Emitting an end event");
+    stream.emit("end");
+    clearInterval(interval);
+  }
+}, 1000);
+image Note  The Date.now() method returns the current date and time specified as the number of milliseconds that have elapsed since January 1, 1970, 00:00:00 UTC.
+
+The close Event
+
+The close event is used to indicate that the underlying source of the stream data has been closed. For example, streams that read data from a file emit a close event when the file descriptor is closed. Not all readable streams emit a close event. Therefore, if you implement your own readable stream, you are not required to emit this event. If present, the close event contains no additional arguments. An example of a close event is shown in Listing 7-5.
+
+Listing 7-5.  Emitting a close Event
+
+var Stream = require("stream");
+var stream = new Stream();
+
+stream.readable = true;
+stream.emit("close");
+error Events
+
+error events are used to indicate that a problem occurred with the data stream. For example, streams that read from files emit an error event if the backing file does not exist. The error event handler is passed an Error object with details explaining the problem. The example in Listing 7-6 emits an error event.
+
+Listing 7-6.  Emitting an error Event
+
+var Stream = require("stream");
+var stream = new Stream();
+
+stream.readable = true;
+stream.emit("error", new Error("Something went wrong!"));
+Controlling Readable Streams
+
+To pause readable streams, use the pause() method. When in a paused state, a readable stream ceases to emit data events (Chapter 5 covered pause() in the context of stdin). An example use of pause() is shown in Listing 7-7.
+
+Listing 7-7.  Calling pause() on stdin
+
+process.stdin.pause();
+By default, stdin is in the paused state (see Chapter 5). In order to read data from stdin or any other paused stream, first unpause it using the resume() method. The example in Listing 7-8 shows the usage of resume(). After calling resume(), data arriving via stdin will cause data events to be emitted.
+
+Listing 7-8.  Calling resume() on stdin
+
+process.stdin.resume();
+Writable Streams
+
+Just as readable streams are sources of data, writable streams are destinations for data. To create a writable stream, set a stream’s writable property to true, and define methods named write() and end(). The following sections describe these methods, as well as the other features of writable streams.
+
+The write() Method
+
+The write() method is responsible for writing a chunk of data to the stream. The data chunk is passed to write() as a Buffer or a string. If the chunk is a string, the optional second argument can be used to specify the encoding. If no encoding is specified, UTF-8 will be used by default. As an optional final argument, write() also accepts a callback function. If present, the callback function is invoked once the chunk is successfully written.
+
+The write() method also returns a Boolean value indicating whether the chunk was flushed to the underlying resource. If true is returned, the data has been flushed, and the stream can accept more. If false is returned, the data is still queued and waiting to be written. Returning false also notifies the data source to stop sending data until the writable stream emits a drain event.
+
+The example in Listing 7-9 shows a call to stdout’s write() method. The call to write() passes in a string. Since the text is UTF-8, the encoding argument is omitted. The callback function thus becomes the second argument.
+
+Listing 7-9.  A Call to stdout’s write() Method
+
+var success = process.stdout.write("foo\n", function() {
+  console.log("Data was successfully written!");
+});
+  console.log("success = " + success); 
+In the resulting output (see Listing 7-10), notice the order in which the print statements execute. The call to write() completes, causing the callback function to be scheduled in the event loop. However, execution returns from write() and then continues on, to print out the value of success. At this point, as the callback function is the only item left in the event loop, it is executed, causing the final print statement to be run.
+
+Listing 7-10.  The Resulting Output from Running the Code in Listing 7-9
+
+$ node write.js
+foo
+success = true
+Data was successfully written!
+The end() Method
+
+The end() method, used to signal the end of the data stream, can be called without any arguments. However, it can also be called with the same arguments as write(). This is a convenient shortcut for situations where write() needs to be called only once, followed by end().
+
+The drain Event
+
+When write() returns false, the stream’s data source should send no more data. The drain event is used to alert the source that the writable stream, having processed all its data, can begin receiving data again. The drain event does not include any accompanying data.
+
+The finish Event
+
+When end() is called and no more data is to be written, the stream emits a finish event. It too, provides no additional data. Unlike drain, which can potentially be emitted many times, finish can be used to detect the end of the stream.
+
+The close and error Events
+
+Like readable streams, writable streams have close and error events that behave in the same fashion.
+
+An Example of a Writable Stream
+
+Let’s look now at a very simple custom writable stream. Custom streams are useful in situations where you want to use the streams API in a situation that is not supported out of the box by Node. In the code in Listing 7-11, adapted from James Halliday’s example (https://github.com/substack/stream-handbook), the stream counts the number of bytes that it processes. Each time the write() method is called, the total byte count increases by the number of bytes in the buffer. When end() is called, it checks whether a buffer has been passed in. If it has, the buffer is passed to write(). The stream is then shut down by setting the writable property to false and emitting a finish event. Finally, the total number of bytes processed by the stream is displayed.
+
+Listing 7-11.  A Custom Writable Stream That Counts the Bytes It Processes
+
+var Stream = require("stream");
+var stream = new Stream();
+var bytes = 0;
+
+stream.writable = true;
+
+stream.write = function(buffer) {
+  bytes += buffer.length;
+};
+
+stream.end = function(buffer) {
+  if (buffer) {
+    stream.write(buffer);
+  }
+
+  stream.writable = false;
+  stream.emit("finish");
+  console.log(bytes + " bytes written");
+};
+Pipes
+
+Let’s return to the garden hose analogy. What if your hose wasn’t long enough to reach from the water supply to your lawn? You might take multiple hoses and connect them. In a similar fashion, data streams can also be chained together in order to accomplish a bigger task. For example, assume we have two programs, Program A and Program B. Program A, whose code is shown in Listing 7-12, generates a random single-digit integer (0–9) once a second and outputs it to stdout. Program B, shown in Listing 7-13, reads an arbitrary number of integers from stdin and outputs a running sum to stdout. All you need now is a hose to connect the two programs.
+
+Listing 7-12.  A Random Single-Digit Integer Generator
+
+setInterval(function() {
+  var random = Math.floor(Math.random() * 10);
+
+  console.log(random);
+}, 1000);
+Listing 7-13.  An Application That Sums Numbers Read from stdin
+
+var sum = 0;
+
+process.stdin.on("data", function(data) {
+  var number = parseInt(data.toString(), 10);
+
+  if (isFinite(number)) {
+    sum += number;
+  }
+
+  console.log(sum);
+});
+
+process.stdin.resume();
+image Note  Math.random() returns a pseudo-random floating-point number between 0 (inclusive) and 1 (exclusive). Multiplying this value by 10, as shown in Listing 7-12, gives a random floating-point number between 0 (inclusive) and 10 (exclusive). Math.floor() returns the largest integer that is less than the argument passed in. Therefore, Listing 7-12 generates a random integer between 0 (inclusive) and 9 (inclusive).
+
+These metaphorical hoses are called pipes. If you’ve done any shell programming, you have undoubtedly come across pipes. They allow an output stream from one process to feed directly into the input stream of another. In shell programming, the pipe operator, |, implements pipes. Listing 7-14 shows how to use a pipe to connect the two example programs from the command line. In the example, the output from Program A is piped to the input of Program B. When you run this command, you will see a stream of numbers, representing the value of the sum variable in Program B, print to the console at a rate of one per second.
+
+Listing 7-14.  Piping Output from One Program to Another
+
+$ node Program-A.js | node Program-B.js
+The pipe() Method
+
+Within Node applications, streams can be piped together using the pipe() method, which takes two arguments: a required writable stream that acts as the destination for the data and an optional object used to pass in options. In the simple example in Listing 7-15, a pipe is created from stdin to stdout. When this program is run, it listens for input from the user. When the Enter key is pressed, any data typed by the user echoes back to stdout.
+
+Listing 7-15.  Piping stdin to stdout Using the pipe() Method
+
+process.stdin.pipe(process.stdout);
+The optional second argument to pipe() is an object that can hold a single Boolean property, end. If end is true (the default behavior), the destination stream is closed when the source stream emits its end event. If end is set to false, however, the destination stream stays open, and so additional data can be written to the destination stream without the need to reopen it.
+
+image Note  The standard streams behave synchronously when associated with a file or terminal window. For example, a write to stdout will block the rest of the program. However, when they are piped, they behave asynchronously, just like any other stream. Additionally, the writable standard streams, stdout and stderr, cannot be closed until the process terminates, regardless of the value of the end option.
+
+Back to the Writable Stream Example
+
+When Listing 7-11 introduced a custom writable stream, you weren’t able to see it do anything. Now that you have learned about pipes, that example stream can be fed some data. Listing 7-16 shows how this is done. The final three lines are particularly noteworthy. First, a pipe with the same source and destination is created. Next, the stream emits a data event followed by an end event.
+
+Listing 7-16.  Piping Data to the Custom Writable Stream from Listing 7-11
+
+var Stream = require("stream");
+var stream = new Stream();
+var bytes = 0;
+
+stream.writable = true;
+
+stream.write = function(buffer) {
+  bytes += buffer.length;
+};
+
+stream.end = function(buffer) {
+  if (buffer) {
+    stream.write(buffer);
+  }
+
+  stream.writable = false;
+  stream.emit("finish");
+  console.log(bytes + " bytes written");
+};
+
+stream.pipe(stream);
+stream.emit("data", new Buffer("foo"));
+stream.emit("end");
+These events trigger the write() and end() methods of the writable stream. The resulting output is shown in Listing 7-17.
+
+Listing 7-17.  The Resulting Output from Running the Code in Listing 7-16
+
+$ node custom-stream.js
+3 bytes written
+File Streams
+
+In Chapter 6 you saw how to read from and write to files using the fs module’s readFile() and writeFile() methods, as well as their synchronous counterparts. These methods are extremely convenient but have the potential to cause memory issues in your applications. As a refresher, take the example of readFile()  shown in Listing 7-18, where a file named foo.txt is read asynchronously. Once the read is complete, the callback function is invoked, and the contents of the file are printed to the console.
+
+Listing 7-18.  Reading a File Using fs.readFile()
+
+var fs = require("fs");
+
+fs.readFile(__dirname + "/foo.txt", function(error, data) {
+  console.log(data);
+});
+To understand the problem, assume that your application is a web server that receives hundreds or thousands of connections every second. Assume too that all the files being served are, for whatever reason, significantly large and that readFile() is used to read the files from disk into memory on every request before returning the data to the clients. When readFile() is invoked, it buffers the entire contents of the file before invoking its callback function. Since your busy server is buffering many large files simultaneously, memory consumption can spike.
+
+So how can all this nastiness be avoided? As it turns out, the file system module provides methods for reading and writing files as streams. These methods, createReadStream() and createWriteStream(), however, unlike most other fs methods, have no synchronous equivalent. Thus, Chapter 6 intentionally skipped over them until the reader had a more thorough introduction to streams.
+
+createReadStream()
+
+As the name implies, createReadStream() is used to open a file as a readable stream. In its simplest form, createReadStream() takes a file name as an argument and returns a readable stream of the type ReadStream. Since the ReadStream type, defined in the fs module, inherits from the standard readable stream, it can be used in the same fashion.
+
+The example in Listing 7-19 shows createReadStream() reading the contents of a file. The data event handler is used to print out chunks of data as they come through the stream. Since a file can consist of multiple chunks, process.stdout.write() is used to display the chunks. If console.log() was used and the file was more than one chunk large, the output would contain extra line breaks not present in the original file. When the end event is received, console.log() is used to simply print one trailing new line to the output.
+
+Listing 7-19.  Reading a File Using fs.createReadStream()
+
+var fs = require("fs");
+var stream;
+
+stream = fs.createReadStream(__dirname + "/foo.txt");
+
+stream.on("data", function(data) {
+  var chunk = data.toString();
+
+  process.stdout.write(chunk);
+});
+
+stream.on("end", function() {
+  console.log();
+});()
+The ReadStream’s open Event
+
+As previously mentioned, the ReadStream type inherits from the base readable stream. This means that the ReadStream can augment the base stream’s behavior. The open event is a perfect example of this. When the file name passed to createReadStream() is successfully opened, the stream emits an open event. The open event’s handler function is invoked with a single parameter, the file descriptor used by the stream. By getting a handle on the file descriptor, createReadStream() can be used in conjunction with other file system methods that work with such file descriptors as fstat(), read(), write(), and close(). In the example in Listing 7-20, when an open event handler is invoked, the file descriptor is passed to fstat() to display the file’s statistics.
+
+Listing 7-20.  Calling fstat() Using a File Descriptor from the open Event Handler
+
+var fs = require("fs");
+var stream;
+
+stream = fs.createReadStream(__dirname + "/foo.txt");
+
+stream.on("open", function(fd) {
+  fs.fstat(fd, function(error, stats) {
+    if (error) {
+      console.error("fstat error:  " + error.message);
+    } else {
+      console.log(stats);
+    }
+  });
+});
+The options Argument
+
+The optional second argument that createReadStream() takes is named options. If present, this argument is an object whose properties allow you to modify the behavior of createReadStream(). The various properties supported by the options argument are described in Table 7-1.
+
+Table 7-1. Description of the Properties Supported by the options Argument
+
+Property Name
+
+Description
+
+fd	An existing file descriptor. This defaults to null. If a value is provided, it is not necessary to specify a file name as the first argument to createReadStream().
+encoding	Specifies the character encoding of the stream. Defaults to null. The supported encoding types are described in Table 5-1.
+autoClose	If true, the file is automatically closed when an error or end event is emitted. If false, the file is not closed. Defaults to true.
+flags	flags argument passed to open(). See Table 6-3 for a list of available values. Defaults to "r".
+mode	The mode argument passed to open(). Defaults to "0666".
+start	The byte index within the file (inclusive) to begin reading. Defaults to zero (the beginning of the file).
+end	The byte index within the file (inclusive) to stop reading. This can only be used if start is also specified. Defaults to Infinity (the end of the file).
+In the example in Listing 7-21, which utilizes the options argument of createReadStream(), a file descriptor returned by open() is passed to createReadStream(). Since an existing file descriptor is being used, null, instead of a file name, is passed as the first argument to createReadStream(). The example also uses the start and end options to skip the file’s first and last bytes. The fstat() method is used to determine the file size in order to set end appropriately. The example also includes a number of checks for errors. For example, the code will not work properly if a directory is used instead of a normal file.
+
+Listing 7-21.  Utilizing the options Argument of createReadStream()
+
+var fs = require("fs");
+
+fs.open(__dirname + "/foo.txt", "r", function(error, fd) {
+  if (error) {
+    return console.error("open error:  " + error.message);
+  }
+
+  fs.fstat(fd, function(error, stats) {
+    var stream;
+    var size;
+
+    if (error) {
+      return console.error("fstat error:  " + error.message);
+    } else if (!stats.isFile()) {
+      return console.error("files only please");
+    } else if ((size = stats.size) < 3) {
+      return console.error("file must be at least three bytes long");
+    }
+
+    stream = fs.createReadStream(null, {
+      fd: fd,
+      start: 1,
+      end: size - 2
+    });
+
+    stream.on("data", function(data) {
+      var chunk = data.toString();
+
+      process.stdout.write(chunk);
+    });
+
+    stream.on("end", function() {
+      console.log();
+    });
+  });
+});
+createWriteStream()
+
+To create a writable stream associated with a file, use createWriteStream(). Much like createReadStream(), createWriteStream() takes a file path as its first argument and an optional options object as its second, and returns an instance of WriteStream, a data type defined in the fs module that inherits from the base writable stream type.
+
+The example in Listing 7-22, shows how data can be piped to a writable file stream created with createWriteStream(). In this example, a readable file stream is created which pulls data from foo.txt. The data is then piped through a writable stream to a file named bar.txt.
+
+Listing 7-22.  Piping a Readable File Stream to a Writable File Stream
+
+var fs = require("fs");
+var readStream = fs.createReadStream(__dirname + "/foo.txt");
+var writeStream = fs.createWriteStream(__dirname + "/bar.txt");
+
+readStream.pipe(writeStream);
+The options argument to createWriteStream() is slightly different from the one used by createReadStream(). Table 7-2 describes the various properties that the options object passed to createWriteStream() can include.
+
+Table 7-2. The Properties Supported by the options Argument to createWriteStream()
+
+Property Name
+
+Description
+
+fd	An existing file descriptor. This defaults to null. If a value is provided, it is not necessary to specify a file name as the first argument to createWriteStream().
+flags	flags argument passed to open(). See Table 6-3 for a list of available values. Defaults to "w".
+encoding	Specifies the character encoding of the stream. Defaults to null.
+mode	The mode argument passed to open(). Defaults to "0666".
+start	The byte index within the file (inclusive) to begin writing. Defaults to zero (the beginning of the file).
+The WriteStream’s open Event
+
+The WriteStream type also implements its own open event, which is emitted when the destination file is successfully opened. The open event’s handler accepts the file descriptor as its sole argument. An example open event handler for a writable file stream is shown in Listing 7-23. This example simply prints out the integer representing the file descriptor of the open file.
+
+Listing 7-23.  An open Event Handler for a Writable File Stream
+
+var fs = require("fs");
+var stream = fs.createWriteStream(__dirname + "/foo.txt");
+
+stream.on("open", function(fd) {
+  console.log("File descriptor:  " + fd);
+});
+The bytesWritten Property
+
+The WriteStream type keeps track of the number of bytes written to the underlying stream. This count is available via the stream’s bytesWritten property. Listing 7-24 shows how bytesWritten is used. Returning to the example in Listing 7-22, the contents of a file are read using a readable stream and then piped to another file using a writable stream. However, Listing 7-24 includes a handler for the writable stream’s finish event. When the finish event is emitted, this handler is invoked, and the number of bytes that have been written to the file are displayed.
+
+Listing 7-24.  Using the WriteStream’s bytesWritten Property
+
+var fs = require("fs");
+var readStream = fs.createReadStream(__dirname + "/foo.txt");
+var writeStream = fs.createWriteStream(__dirname + "/bar.txt");
+
+readStream.pipe(writeStream);
+
+writeStream.on("finish", function() {
+  console.log(writeStream.bytesWritten);
+});
+Compression Using the zlib Module
+
+Compression is the process of encoding information using fewer bits than its original representation does. Compression is useful because it allows data to be stored or transmitted using fewer bytes. When the data needs to be retrieved, it is simply uncompressed to its original state. Compression is used extensively in web servers to improve response time by reducing the number of bytes sent over the network.  However, it should be noted that compression is not free, and can increase response times. Compression is also commonly used to reduce file sizes when archiving data.
+
+Node’s core zlib module provides compression and decompression APIs that are implemented using streams. Because the zlib module is based on streams, it allows easy compression and decompression of data using pipes. Specifically, zlib provides bindings for compression using Gzip, Deflate, and DeflateRaw as well as decompression using Gunzip, Inflate, and InflateRaw. As all three of these schemes provide the same interface, switching between them is just a matter of changing method names.
+
+The example in Listing 7-25, which uses Gzip to compress a file, begins by importing the fs and zlib modules. Next, the zlib.creatGzip() method is used to create a Gzip compression stream. The data source, input.txt, is used to create a readable file stream. Similarly, a writable file stream is created to output the compressed data to input.txt.gz. The listing’s final line performs the actual compression by reading the uncompressed data and piping it through the Gzip compressor. The compressed data is then piped to the output file.
+
+Listing 7-25.  Compressing a File Using Gzip Compression
+
+var fs = require("fs");
+var zlib = require("zlib");
+var gzip = zlib.createGzip();
+var input = fs.createReadStream("input.txt");
+var output = fs.createWriteStream("input.txt.gz");
+
+input.pipe(gzip).pipe(output);
+To test the compression application, simply create input.txt, and store 100 A characters in it (the file’s size should be 100 bytes). Next, run the Gzip compressor. The file input.txt.gz should be created with a file size of 24 bytes. Of course, the size of the compressed file depends on a few things. The first factor is the size of the uncompressed data. However, the compression’s effectiveness also depends on the number of repeating patterns in the original data. Our example achieved excellent compression because all the characters in the file were the same. By replacing a single A with a B, the compressed file size jumps from 24 to 28 bytes, even though the source data is the same size.
+
+The compressed data may be smaller, but it isn’t particularly useful. To work with the compressed data, we need to decompress it. A sample Gzip decompression application is shown in Listing 7-26. The zlib.createGunzip() method creates a stream that performs the decompression. The input.txt.gz file from Listing 7-25 is used as the readable stream, which is piped through the Gunzip stream. The decompressed data is then piped to a new output file, output.txt.
+
+Listing 7-26.  Decompressing a Gzip Compressed File Using Gunzip
+
+var fs = require("fs");
+var zlib = require("zlib");
+var gunzip = zlib.createGunzip();
+var input = fs.createReadStream("input.txt.gz");
+var output = fs.createWriteStream("output.txt");
+
+input.pipe(gunzip).pipe(output);
+Deflate/Inflate and DeflateRaw/InflateRaw
+
+The Deflate compression scheme can be used as an alternative to Gzip. The DeflateRaw scheme is similar to Deflate, but omits the zlib header that is present in Deflate. As previously mentioned, the usage for these schemes are the same as for Gzip. The methods used to create Deflate and DeflateRaw streams are zlib.createDeflate() and zlib.createDeflateRaw(). Similarly, zlib.createInflate() and zlib.createInflateRaw() are used to create the corresponding decompression streams. An additional method, zlib.createUnzip(), is used in the same way, and it can decompress both Gzip and Deflate compressed data by automatically detecting the compression scheme.
+
+Convenience Methods
+
+All of the previously mentioned stream types have a corresponding convenience method for one-step compression/decompression of a string or Buffer. These methods are gzip(), gunzip(), deflate(), inflate(), deflateRaw(), inflateRaw(), and unzip(). Each of them takes a Buffer or string as its first argument and a callback function as its second. The callback function takes an error condition as its first argument and the result of the compression/decompression (as a Buffer) as its second. Listing 7-27 shows how deflate() and unzip() are used to compress and decompress a string. After compression and decompression, the data is printed to the console. If everything works properly, the same string stored in the data variable is displayed.
+
+Listing 7-27.  Compression and Decompression Using the Convenience Methods
+
+var zlib = require("zlib");
+var data = "This is some data to compress!";
+
+zlib.deflate(data, function(error, compressed) {
+  if (error) {
+    return console.error("Could not compress data!");
+  }
+
+  zlib.unzip(compressed, function(error, decompressed) {
+    if (error) {
+      return console.error("Could not decompress data!");
+    }
+
+    console.log(decompressed.toString());
+  });
+});
+Summary
+
+This chapter has introduced the concept of data streams. You have seen how to create your own streams and how to use existing stream APIs, such as file streams. The coming chapters show streams in the context of network programming. You will also learn how to spawn and control child processes, which expose their own standard streams.
+
+Enjoy Safari? Subscribe Today
+
+back to top
+Recommended Queue History Topics Tutorials Settings Blog Support Get the App Sign Out
+© 2016 Safari. Terms of Service / Privacy Policy
