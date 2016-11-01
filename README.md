@@ -12,3 +12,4 @@ Going deep inside the nodejs through nodejs.org
     - Post form data to previous server using http.request and echoed the passed parameter from the server.
     - Used request third party module
     - Created HTTPS Server using self generated key and cert.
+- Learnt the basic express and it's default generated app
