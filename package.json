@@ -3,6 +3,7 @@
     "start": "nodemon app"
   },
   "dependencies": {
-    "commander": "^2.9.0"
+    "commander": "^2.9.0",
+    "request": "^2.76.0"
   }
 }
