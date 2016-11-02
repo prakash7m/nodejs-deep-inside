@@ -13,3 +13,8 @@ Going deep inside the nodejs through nodejs.org
     - Used request third party module
     - Created HTTPS Server using self generated key and cert.
 - Learnt the basic express and it's default generated app
+
+## Pro NodeJS For Developers: A safari online book
+- Also covered the chapter 13 Real Time Web, where reviewed the concepts of web sockets and use of socket.io with nodejs.
+- Also covered the chapter 14 Databases and reviewed the use of MySql and MongoDB with Node
+- Also reviewed chapter 15 Logging, Debugging and Testing. (Already used morgan for logging, node-inspector for debugging and Mocha and Chai for Testing.)
